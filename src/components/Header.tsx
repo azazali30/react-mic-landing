@@ -1,13 +1,7 @@
-import { Search, Menu, Bot } from "lucide-react";
+import { Search, Menu } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 
-interface HeaderProps {
-  onChatToggle: () => void;
-  isChatOpen: boolean;
-}
-
-const Header = ({ onChatToggle, isChatOpen }: HeaderProps) => {
+const Header = () => {
   return (
     <header className="h-16 bg-card border-b border-border px-6 flex items-center justify-between">
       <div className="flex items-center space-x-4">
@@ -30,19 +24,6 @@ const Header = ({ onChatToggle, isChatOpen }: HeaderProps) => {
             className="pl-10 w-64 bg-background"
           />
         </div>
-        <Button
-          onClick={onChatToggle}
-          variant="ghost"
-          size="sm"
-          className={`p-3 rounded-lg transition-colors border-2 ${
-            isChatOpen 
-              ? "bg-blue-500 text-white border-blue-600" 
-              : "hover:bg-blue-100 border-blue-200 bg-blue-50"
-          }`}
-          title="GenAI Assistant"
-        >
-          <Bot className={`h-6 w-6 ${isChatOpen ? "text-white" : "text-blue-600"}`} />
-        </Button>
         <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
           <span className="text-primary-foreground font-bold text-sm">A</span>
         </div>
