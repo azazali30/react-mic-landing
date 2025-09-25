@@ -12,7 +12,12 @@ interface Message {
   timestamp: Date;
 }
 
-const SpeechToSpeechChat = () => {
+interface SpeechToSpeechChatProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const SpeechToSpeechChat = ({ isOpen, onClose }: SpeechToSpeechChatProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
@@ -112,8 +117,10 @@ const SpeechToSpeechChat = () => {
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <Card className="w-80 h-full flex flex-col bg-card">
+    <Card className="w-72 h-96 flex flex-col bg-card shadow-lg border fixed top-20 right-4 z-50 animate-fade-in">
       {/* Header */}
       <div className="p-4 border-b border-border bg-[hsl(var(--pulse-header))] flex items-center justify-between">
         <div className="flex items-center space-x-2">
@@ -136,7 +143,7 @@ const SpeechToSpeechChat = () => {
             <div className="text-xs text-muted-foreground">Post</div>
           </div>
         </div>
-        <Button variant="ghost" size="sm">
+        <Button variant="ghost" size="sm" onClick={onClose}>
           <X size={16} />
         </Button>
       </div>
