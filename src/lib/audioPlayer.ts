@@ -112,14 +112,18 @@ export function base64ToFloat32Array(base64: string): Float32Array {
       bytes[i] = binaryString.charCodeAt(i);
     }
     
-    // Convert to Float32Array (assuming PCM data)
-    const samples = new Float32Array(bytes.length / 4);
+    // Convert to Float32Array (16-bit PCM data from server)
+    // Server sends 16-bit PCM, so we need to read 2 bytes per sample
+    const samples = new Float32Array(bytes.length / 2);
     const dataView = new DataView(bytes.buffer);
     
     for (let i = 0; i < samples.length; i++) {
-      samples[i] = dataView.getFloat32(i * 4, true) / 32768.0; // Convert to -1.0 to 1.0 range
+      // Read 16-bit signed integer (little-endian) and convert to float
+      const int16Sample = dataView.getInt16(i * 2, true);
+      samples[i] = int16Sample / 32768.0; // Convert to -1.0 to 1.0 range
     }
     
+    console.log(`Converted base64 to Float32Array: ${bytes.length} bytes -> ${samples.length} samples`);
     return samples;
   } catch (error) {
     console.error("Error converting base64 to Float32Array:", error);

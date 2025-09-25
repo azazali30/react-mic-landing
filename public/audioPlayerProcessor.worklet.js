@@ -83,15 +83,25 @@ class AudioPlayerProcessor extends AudioWorkletProcessor {
         super();
         this.playbackBuffer = new ExpandableBuffer();
         this.port.onmessage = (event) => {
+            console.log("AudioWorklet received message:", event.data.type, event.data.samples ? `${event.data.samples.length} samples` : '');
+            
             if (event.data.type === "audio") {
                 this.playbackBuffer.write(event.data.audioData);
+                console.log("AudioWorklet: wrote audio data to buffer");
+            }
+            else if (event.data.type === "play-audio") {
+                // Handle the message type sent by AudioPlayer.playAudio()
+                this.playbackBuffer.write(event.data.samples);
+                console.log("AudioWorklet: wrote play-audio samples to buffer, samples length:", event.data.samples.length);
             }
             else if (event.data.type === "initial-buffer-length") {
                 // Override the current playback initial buffer length
                 this.playbackBuffer.initialBufferLength = event.data.bufferLength;
+                console.log("AudioWorklet: set initial buffer length to", event.data.bufferLength);
             }
             else if (event.data.type === "barge-in") {
                 this.playbackBuffer.clearBuffer();
+                console.log("AudioWorklet: cleared buffer for barge-in");
             }
         };
     }
