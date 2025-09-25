@@ -778,17 +778,14 @@ const SpeechToSpeechChat = ({ isOpen, onClose }: SpeechToSpeechChatProps) => {
   if (!isOpen) return null;
 
   return (
-    <Card className="w-96 h-[600px] flex flex-col bg-white shadow-2xl border fixed bottom-4 right-4 z-50 animate-fade-in rounded-lg">
+    <div className="fixed bottom-4 right-4 z-50 w-[400px] h-[700px] bg-white rounded-lg shadow-2xl border border-gray-200 flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg flex items-center justify-between">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white rounded-t-lg">
         <div className="flex items-center space-x-2">
           <Sparkles className="text-purple-600" size={20} />
-          <span className="font-semibold text-gray-900">InterviewProcessAgent</span>
+          <span className="font-semibold text-gray-900 text-base">InterviewProcessAgent</span>
         </div>
         <div className="flex items-center space-x-1">
-          <Button variant="outline" size="sm" className="text-xs px-2 py-1">
-            Actions
-          </Button>
           <Button variant="ghost" size="sm" className="p-1">
             <MoreHorizontal size={16} className="text-gray-600" />
           </Button>
@@ -799,28 +796,38 @@ const SpeechToSpeechChat = ({ isOpen, onClose }: SpeechToSpeechChatProps) => {
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 p-6 overflow-y-auto bg-white flex flex-col items-center justify-center">
+      <div className="flex-1 overflow-y-auto bg-white">
         {messages.length === 0 ? (
-          <div className="text-center">
-            <div className="mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-red-600 text-xl">⚠</span>
-              </div>
-              <p className="text-gray-600 text-sm">Failed to connect to /10.255.255.254:8080</p>
+          <div className="flex flex-col items-center justify-center h-full p-6">
+            <div className="flex items-center space-x-2 mb-4">
+              <Sparkles className="text-purple-600" size={24} />
+              <span className="font-semibold text-gray-900 text-lg">InterviewProcessAgent</span>
+            </div>
+            <div className="flex space-x-4 mb-6">
+              <Button variant="ghost" size="sm" className="p-2">
+                <div className="w-6 h-6 border-2 border-gray-300 rounded flex items-center justify-center">
+                  <span className="text-xs">👍</span>
+                </div>
+              </Button>
+              <Button variant="ghost" size="sm" className="p-2">
+                <div className="w-6 h-6 border-2 border-gray-300 rounded flex items-center justify-center">
+                  <span className="text-xs">👎</span>
+                </div>
+              </Button>
             </div>
           </div>
         ) : (
-          <div className="w-full space-y-4">
+          <div className="p-4 space-y-4">
             {messages.map((message) => (
               <div
                 key={message.id}
                 className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[80%] p-3 rounded-lg text-sm ${
+                  className={`max-w-[85%] p-3 rounded-2xl text-sm leading-relaxed ${
                     message.sender === "user"
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-100 text-gray-900"
+                      ? "bg-blue-500 text-white rounded-br-sm"
+                      : "bg-gray-100 text-gray-900 rounded-bl-sm"
                   }`}
                 >
                   {message.text}
@@ -833,88 +840,93 @@ const SpeechToSpeechChat = ({ isOpen, onClose }: SpeechToSpeechChatProps) => {
       </div>
 
       {/* Input Area */}
-      <div className="p-4 border-t border-gray-200 bg-white rounded-b-lg">
-        <div className="text-sm text-gray-700 mb-3 font-medium">Message InterviewProcessAgent</div>
-        <div className="mb-3">
-          <textarea
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder=""
-            className="w-full p-3 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            rows={3}
-          />
+      <div className="border-t border-gray-200 bg-white rounded-b-lg">
+        <div className="p-4 pb-2">
+          <div className="text-sm text-gray-700 mb-3 font-medium">Message InterviewProcessAgent</div>
+          <div className="relative">
+            <textarea
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder=""
+              className="w-full p-3 pr-12 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              rows={3}
+            />
+          </div>
         </div>
         
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex items-center space-x-1 text-purple-600 hover:bg-purple-50 p-2"
-            >
-              <Sparkles size={16} />
-              <span className="text-sm">Suggestions</span>
-              <ChevronDown size={14} />
-            </Button>
+        <div className="px-4 pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center space-x-1 text-purple-600 hover:bg-purple-50 p-2 rounded-md"
+              >
+                <Sparkles size={16} />
+                <span className="text-sm">Suggestions</span>
+                <ChevronDown size={12} />
+              </Button>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-2 hover:bg-gray-100 rounded-md"
+                title="Attach file"
+              >
+                <Paperclip size={16} className="text-gray-600" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`p-2 rounded-md transition-colors ${
+                  isInConversation 
+                    ? "bg-red-100 hover:bg-red-200 text-red-600" 
+                    : "hover:bg-gray-100 text-gray-600"
+                }`}
+                onClick={toggleConversation}
+                title={
+                  isInConversation 
+                    ? "End conversation" 
+                    : "Start conversation"
+                }
+              >
+                {isInConversation ? <MicOff size={16} /> : <Mic size={16} />}
+              </Button>
+              <Button
+                onClick={handleSendMessage}
+                disabled={!inputText.trim()}
+                className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 text-sm font-medium rounded-md"
+              >
+                Send
+              </Button>
+            </div>
           </div>
           
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="p-2 hover:bg-gray-100"
-              title="Attach file"
-            >
-              <Paperclip size={16} className="text-gray-600" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`p-2 transition-colors ${
-                isInConversation 
-                  ? "bg-red-100 hover:bg-red-200 text-red-600" 
-                  : "hover:bg-gray-100 text-gray-600"
-              }`}
-              onClick={toggleConversation}
-              title={
-                isInConversation 
-                  ? "End conversation" 
-                  : "Start conversation"
-              }
-            >
-              {isInConversation ? <MicOff size={16} /> : <Mic size={16} />}
-            </Button>
-            <Button
-              onClick={handleSendMessage}
-              disabled={!inputText.trim()}
-              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 text-sm font-medium"
-            >
-              Send
-            </Button>
-          </div>
-        </div>
-        
-        <div className="flex items-center justify-between mt-2">
-          <div className="text-xs text-gray-500">
-            Verify AI-generated content for accuracy.
-          </div>
-          {(isInConversation || isRecording || isProcessing) && (
-            <div className="flex items-center space-x-1 text-xs">
-              <div className={`w-2 h-2 rounded-full ${
-                isInConversation ? 'bg-green-500 animate-pulse' : 
-                isRecording ? 'bg-red-500 animate-pulse' : 'bg-blue-500 animate-spin'
-              }`}></div>
-              <span className={`${
-                isInConversation ? 'text-green-600' :
-                isRecording ? 'text-red-600' : 'text-blue-600'
-              }`}>
-                {status}
-              </span>
+          <div className="flex items-center justify-between mt-3">
+            <div className="text-xs text-gray-500">
+              Verify AI-generated content for accuracy.
             </div>
-          )}
+            {(isInConversation || isRecording || isProcessing) && (
+              <div className="flex items-center space-x-1 text-xs">
+                <div className={`w-2 h-2 rounded-full ${
+                  isInConversation ? 'bg-green-500 animate-pulse' : 
+                  isRecording ? 'bg-red-500 animate-pulse' : 'bg-blue-500 animate-spin'
+                }`}></div>
+                <span className={`${
+                  isInConversation ? 'text-green-600' :
+                  isRecording ? 'text-red-600' : 'text-blue-600'
+                }`}>
+                  {status}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </Card>
+    </div>
   );
 };
 
