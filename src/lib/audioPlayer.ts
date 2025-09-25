@@ -82,10 +82,16 @@ export class AudioPlayer {
       });
     }
 
-    // Send the audio samples to the worklet
+    // Check if we have valid audio data
+    if (!samples || samples.length === 0) {
+      console.warn("Received empty audio data");
+      return;
+    }
+
+    // Send the audio samples to the worklet using the same message type as the working project
     this.workletNode.port.postMessage({
-      type: "play-audio",
-      samples: samples,
+      type: "audio",
+      audioData: samples,
     });
   }
 
@@ -100,31 +106,22 @@ export class AudioPlayer {
 
 export function base64ToFloat32Array(base64: string): Float32Array {
   try {
-    // Remove data URL prefix if present
-    const base64Data = base64.includes(',') ? base64.split(',')[1] : base64;
-    
-    // Decode base64 to binary string
-    const binaryString = atob(base64Data);
-    
-    // Convert binary string to Uint8Array
+    // Use the same approach as the working project
+    const binaryString = atob(base64);
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
       bytes[i] = binaryString.charCodeAt(i);
     }
-    
-    // Convert to Float32Array (16-bit PCM data from server)
-    // Server sends 16-bit PCM, so we need to read 2 bytes per sample
-    const samples = new Float32Array(bytes.length / 2);
-    const dataView = new DataView(bytes.buffer);
-    
-    for (let i = 0; i < samples.length; i++) {
-      // Read 16-bit signed integer (little-endian) and convert to float
-      const int16Sample = dataView.getInt16(i * 2, true);
-      samples[i] = int16Sample / 32768.0; // Convert to -1.0 to 1.0 range
+
+    // Use Int16Array as intermediate step for proper alignment (like working project)
+    const int16Array = new Int16Array(bytes.buffer);
+    const float32Array = new Float32Array(int16Array.length);
+    for (let i = 0; i < int16Array.length; i++) {
+      float32Array[i] = int16Array[i] / 32768.0;
     }
-    
-    console.log(`Converted base64 to Float32Array: ${bytes.length} bytes -> ${samples.length} samples`);
-    return samples;
+
+    console.log(`Converted base64 to Float32Array: ${bytes.length} bytes -> ${float32Array.length} samples`);
+    return float32Array;
   } catch (error) {
     console.error("Error converting base64 to Float32Array:", error);
     return new Float32Array(0);

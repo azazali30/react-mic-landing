@@ -1,13 +1,13 @@
 // Audio sample buffer to minimize reallocations
 class ExpandableBuffer {
     constructor() {
-        // Start with half a second's worth of buffered audio capacity
-        this.buffer = new Float32Array(12000);
+        // Start with one second's worth of buffered audio capacity before needing to expand
+        this.buffer = new Float32Array(24000);
         this.readIndex = 0;
         this.writeIndex = 0;
         this.underflowedSamples = 0;
         this.isInitialBuffering = true;
-        this.initialBufferLength = 4800;  // 200ms at 24kHz - adjust for responsiveness
+        this.initialBufferLength = 24000;  // One second at 24kHz - much larger buffer for stability
         this.lastWriteTime = 0;
     }
 
@@ -57,14 +57,24 @@ class ExpandableBuffer {
             // Only start to play audio after we've built up some initial cushion
             copyLength = Math.min(destination.length, this.writeIndex - this.readIndex);
         }
-        destination.set(this.buffer.subarray(this.readIndex, this.readIndex + copyLength));
-        this.readIndex += copyLength;
+        
+        if (copyLength > 0) {
+            destination.set(this.buffer.subarray(this.readIndex, this.readIndex + copyLength));
+            this.readIndex += copyLength;
+        }
 
         if (copyLength < destination.length) {
             // Not enough samples (buffer underflow). Fill the rest with silence.
-            destination.fill(0, copyLength);
-            this.underflowedSamples += destination.length - copyLength;
+            // Use a gentle fade to silence to reduce glitches
+            const remainingLength = destination.length - copyLength;
+            for (let i = copyLength; i < destination.length; i++) {
+                // Gentle fade to silence instead of abrupt cut
+                const fadeRatio = Math.max(0, 1 - (i - copyLength) / Math.min(remainingLength, 64));
+                destination[i] = 0 * fadeRatio;
+            }
+            this.underflowedSamples += remainingLength;
         }
+        
         if (copyLength === 0) {
             // Ran out of audio, so refill the buffer to the initial length before playing more
             this.isInitialBuffering = true;
@@ -83,25 +93,15 @@ class AudioPlayerProcessor extends AudioWorkletProcessor {
         super();
         this.playbackBuffer = new ExpandableBuffer();
         this.port.onmessage = (event) => {
-            console.log("AudioWorklet received message:", event.data.type, event.data.samples ? `${event.data.samples.length} samples` : '');
-            
             if (event.data.type === "audio") {
                 this.playbackBuffer.write(event.data.audioData);
-                console.log("AudioWorklet: wrote audio data to buffer");
-            }
-            else if (event.data.type === "play-audio") {
-                // Handle the message type sent by AudioPlayer.playAudio()
-                this.playbackBuffer.write(event.data.samples);
-                console.log("AudioWorklet: wrote play-audio samples to buffer, samples length:", event.data.samples.length);
             }
             else if (event.data.type === "initial-buffer-length") {
                 // Override the current playback initial buffer length
                 this.playbackBuffer.initialBufferLength = event.data.bufferLength;
-                console.log("AudioWorklet: set initial buffer length to", event.data.bufferLength);
             }
             else if (event.data.type === "barge-in") {
                 this.playbackBuffer.clearBuffer();
-                console.log("AudioWorklet: cleared buffer for barge-in");
             }
         };
     }

@@ -34,6 +34,11 @@ const SpeechToSpeechChat = ({ isOpen, onClose }: SpeechToSpeechChatProps) => {
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const isRecordingRef = useRef<boolean>(false);
+  
+  // Audio queue management for smooth playback
+  const audioQueueRef = useRef<Float32Array[]>([]);
+  const maxQueueSize = 200;
+  const isProcessingAudioRef = useRef<boolean>(false);
 
   // Initialize audio player
   useEffect(() => {
@@ -236,30 +241,14 @@ const SpeechToSpeechChat = ({ isOpen, onClose }: SpeechToSpeechChatProps) => {
             try {
               // Convert base64 PCM to Float32Array for the audio player
               const audioData = base64ToFloat32Array(data.content);
-              console.log(`Converted audio data: ${audioData.length} samples, first few values:`, audioData.slice(0, 10));
+              console.log(`Converted audio data: ${audioData.length} samples`);
               
-              // Ensure audio player is initialized and started
-              if (audioPlayerRef.current) {
-                // Start audio player if not already started (non-async call)
-                audioPlayerRef.current.start().then(() => {
-                  console.log("Audio player started, now playing audio...");
-                  if (audioPlayerRef.current) {
-                    audioPlayerRef.current.playAudio(audioData);
-                    console.log("Audio playback initiated successfully");
-                    setStatus("Playing audio response...");
-                  }
-                }).catch(startErr => {
-                  console.error("Error starting audio player:", startErr);
-                  // Try to play anyway in case it's already started
-                  if (audioPlayerRef.current) {
-                    audioPlayerRef.current.playAudio(audioData);
-                  }
-                });
-              } else {
-                console.error("Audio player not initialized");
-              }
+              // Queue audio for smooth playback instead of playing immediately
+              queueAudioForPlayback(audioData);
+              setStatus("Playing audio response...");
+              
             } catch (err) {
-              console.error("Error playing audio:", err);
+              console.error("Error processing audio:", err);
             }
           } else {
             console.error("Received audio with unsupported format:", data.format, data.contentType);
@@ -328,6 +317,52 @@ const SpeechToSpeechChat = ({ isOpen, onClose }: SpeechToSpeechChatProps) => {
     }
     
     console.log(`Disconnected from Nova Sonic. ${event.wasClean ? 'Connection closed cleanly.' : 'Connection interrupted.'}`);
+  };
+
+  // Audio queue processing for smooth playback
+  const processAudioQueue = async () => {
+    if (isProcessingAudioRef.current || audioQueueRef.current.length === 0) return;
+
+    isProcessingAudioRef.current = true;
+    try {
+      // Process audio chunks in batches to avoid overwhelming the audio pipeline
+      let processedChunks = 0;
+      const maxChunksPerBatch = 5; // Process max 5 chunks at a time
+
+      while (audioQueueRef.current.length > 0 && processedChunks < maxChunksPerBatch) {
+        const audioData = audioQueueRef.current.shift();
+        if (audioData && audioPlayerRef.current) {
+          try {
+            await audioPlayerRef.current.start();
+            audioPlayerRef.current.playAudio(audioData);
+            processedChunks++;
+          } catch (err) {
+            console.error("Error playing queued audio:", err);
+          }
+        }
+      }
+    } finally {
+      isProcessingAudioRef.current = false;
+
+      // If there are still items in the queue, schedule the next processing
+      if (audioQueueRef.current.length > 0) {
+        setTimeout(() => processAudioQueue(), 0);
+      }
+    }
+  };
+
+  // Queue audio for smooth playback
+  const queueAudioForPlayback = (audioData: Float32Array) => {
+    // Check queue size to avoid memory issues
+    if (audioQueueRef.current.length >= maxQueueSize) {
+      // Queue is full, drop oldest chunk
+      audioQueueRef.current.shift();
+      console.log("Audio queue full, dropping oldest chunk");
+    }
+
+    // Queue the audio chunk for playback
+    audioQueueRef.current.push(audioData);
+    processAudioQueue();
   };
 
   // Send a command to the server
