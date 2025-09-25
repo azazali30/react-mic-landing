@@ -34,12 +34,14 @@ const Header = ({ onChatToggle, isChatOpen }: HeaderProps) => {
           onClick={onChatToggle}
           variant="ghost"
           size="sm"
-          className={`p-2 rounded-lg transition-colors ${
-            isChatOpen ? "bg-blue-500 text-white" : "hover:bg-blue-100"
+          className={`p-3 rounded-lg transition-colors border-2 ${
+            isChatOpen 
+              ? "bg-blue-500 text-white border-blue-600" 
+              : "hover:bg-blue-100 border-blue-200 bg-blue-50"
           }`}
           title="GenAI Assistant"
         >
-          <Bot className={`h-5 w-5 ${isChatOpen ? "text-white" : "text-blue-500"}`} />
+          <Bot className={`h-6 w-6 ${isChatOpen ? "text-white" : "text-blue-600"}`} />
         </Button>
         <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
           <span className="text-primary-foreground font-bold text-sm">A</span>
