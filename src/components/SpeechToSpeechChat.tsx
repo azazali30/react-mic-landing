@@ -22,8 +22,9 @@ const SpeechToSpeechChat = ({ isOpen, onClose }: SpeechToSpeechChatProps) => {
   const [inputText, setInputText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
-  const [status, setStatus] = useState("Ready to connect");
+  const [status, setStatus] = useState("Ready to start conversation");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isInConversation, setIsInConversation] = useState(false);
   const [audioChunks, setAudioChunks] = useState<Float32Array[]>([]);
   
   const websocketRef = useRef<WebSocket | null>(null);
@@ -626,18 +627,109 @@ const SpeechToSpeechChat = ({ isOpen, onClose }: SpeechToSpeechChatProps) => {
     }
   };
 
-  const toggleRecording = async () => {
-    // First check if we need to connect
-    if (!isConnected) {
-      await connect();
-      return;
+  // Start continuous conversation mode
+  const startConversation = async () => {
+    try {
+      setStatus('Starting conversation...');
+      console.log('Starting conversation mode...');
+      
+      // Initialize audio player first
+      if (audioPlayerRef.current) {
+        try {
+          await audioPlayerRef.current.start();
+          console.log("Audio player started successfully");
+        } catch (err) {
+          console.error("Failed to start audio player:", err);
+        }
+      }
+      
+      // Use the real WebSocket endpoint from the HTML file
+      const SERVER_URL = 'wss://flamingos-cluster-backend-us-east-1.cluster.integration.pegaservice.net/ap-redis/v2/isolations/iso-pega/speech-to-speech/ws';
+      
+      console.log(`Connecting to WebSocket server at ${SERVER_URL}...`);
+      
+      // Create WebSocket connection
+      websocketRef.current = new WebSocket(SERVER_URL);
+      console.log("WebSocket instance created");
+      
+      // Set up event handlers
+      websocketRef.current.onopen = async () => {
+        console.log("WebSocket connection opened successfully");
+        setIsConnected(true);
+        
+        // Add system message for connection
+        const systemMessage: Message = {
+          id: Date.now().toString(),
+          text: "Connected to Nova Sonic. Starting conversation...",
+          sender: "agent",
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, systemMessage]);
+        
+        // Start recording immediately after connection
+        await startRecording();
+        setIsInConversation(true);
+        setStatus("Conversation active - Speak anytime");
+        
+        console.log("Conversation started successfully");
+      };
+      
+      websocketRef.current.onmessage = handleWebSocketMessage;
+      websocketRef.current.onerror = handleWebSocketError;
+      websocketRef.current.onclose = handleWebSocketClose;
+      
+      // Add a timeout to detect connection issues
+      setTimeout(() => {
+        if (websocketRef.current && websocketRef.current.readyState !== WebSocket.OPEN) {
+          console.error("WebSocket connection timeout");
+          setStatus("Connection timeout. Make sure the server is running.");
+        }
+      }, 5000);
+      
+    } catch (err) {
+      console.error("Error starting conversation:", err);
+      setStatus(`Error starting conversation: ${err.message}`);
     }
-    
-    // If connected, toggle recording
-    if (!isRecording) {
-      await startRecording();
+  };
+
+  // End conversation and disconnect
+  const endConversation = async () => {
+    try {
+      console.log('Ending conversation mode...');
+      setIsInConversation(false);
+      
+      // Stop recording if active
+      if (isRecording) {
+        await stopRecording();
+      }
+      
+      // Disconnect from WebSocket
+      disconnect();
+      
+      setStatus("Conversation ended");
+      
+      // Add system message
+      const endMessage: Message = {
+        id: Date.now().toString(),
+        text: "Conversation ended. Click the mic to start a new conversation.",
+        sender: "agent",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, endMessage]);
+      
+    } catch (err) {
+      console.error("Error ending conversation:", err);
+      setStatus(`Error ending conversation: ${err.message}`);
+    }
+  };
+
+  const toggleConversation = async () => {
+    if (!isInConversation && !isConnected) {
+      // Start new conversation
+      await startConversation();
     } else {
-      await stopRecording();
+      // End current conversation
+      await endConversation();
     }
   };
 
@@ -744,22 +836,18 @@ const SpeechToSpeechChat = ({ isOpen, onClose }: SpeechToSpeechChatProps) => {
               variant="ghost"
               size="sm"
               className={`p-2 transition-colors ${
-                isRecording 
+                isInConversation 
                   ? "bg-red-100 hover:bg-red-200 text-red-600" 
-                  : isConnected
-                  ? "bg-green-50 hover:bg-green-100 text-green-600"
                   : "hover:bg-gray-100 text-gray-600"
               }`}
-              onClick={toggleRecording}
+              onClick={toggleConversation}
               title={
-                !isConnected 
-                  ? "Connect to speech service" 
-                  : isRecording 
-                  ? "Stop recording" 
-                  : "Start voice recording"
+                isInConversation 
+                  ? "End conversation" 
+                  : "Start conversation"
               }
             >
-              {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
+              {isInConversation ? <MicOff size={16} /> : <Mic size={16} />}
             </Button>
             <Button
               onClick={handleSendMessage}
@@ -775,12 +863,14 @@ const SpeechToSpeechChat = ({ isOpen, onClose }: SpeechToSpeechChatProps) => {
           <div className="text-xs text-gray-500">
             Verify AI-generated content for accuracy.
           </div>
-          {(isRecording || isProcessing) && (
+          {(isInConversation || isRecording || isProcessing) && (
             <div className="flex items-center space-x-1 text-xs">
               <div className={`w-2 h-2 rounded-full ${
+                isInConversation ? 'bg-green-500 animate-pulse' : 
                 isRecording ? 'bg-red-500 animate-pulse' : 'bg-blue-500 animate-spin'
               }`}></div>
               <span className={`${
+                isInConversation ? 'text-green-600' :
                 isRecording ? 'text-red-600' : 'text-blue-600'
               }`}>
                 {status}
